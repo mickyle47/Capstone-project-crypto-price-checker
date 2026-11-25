@@ -10,6 +10,7 @@ import { renderError } from "./lib/errors.js";
 import { createBlockchainClient } from "./services/blockchain.js";
 import pageRoutes from "./routes/pages.js";
 import watchlistRoutes from "./routes/watchlist.js";
+import portfolioRoutes from "./routes/portfolio.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,6 +62,7 @@ export function createApp({
 
   app.use("/", pageRoutes(blockchain));
   app.use("/watchlist", watchlistRoutes(blockchain));
+  app.use("/portfolio", portfolioRoutes(blockchain));
 
   // Unknown URL
   app.use((req, res) => {

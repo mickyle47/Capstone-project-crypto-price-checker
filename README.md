@@ -9,6 +9,7 @@ rendered with EJS.
 - Choose a market from a dropdown grouped by quote currency (USD, EUR, BTC...) and see its last trade price, price 24h ago, 24h volume and % change
 - Order book view (best bids and asks, with size bars and the spread) for each market
 - Watchlist: save markets and see their latest prices on one page (stored in a cookie, no database)
+- Portfolio: enter how much of each coin you hold and see its value at the last price, with a total per quote currency (dollars and euros are never added together). Saved in a cookie, so nothing is stored on a server
 - Home page lists the busiest markets that traded in the last 24 hours (most pairs on this exchange are idle)
 - Warns when a price may be out of date (nothing traded in 24h, or the last trade is outside the live bid/ask range) - this exchange is thinly traded
 - API results are cached in memory (market list 30s, each market and order book 15s) so page views don't hammer the API; failures are never cached
@@ -61,10 +62,10 @@ Uses Node's built-in test runner (no extra packages) with a fake API client, so 
 ```
 index.js              Starts the server
 app.js                Builds the Express app (views, routes, error handlers)
-routes/               pages.js (home, price) and watchlist.js
+routes/               pages.js (home, price), watchlist.js and portfolio.js
 services/blockchain.js  All Blockchain.com API calls (Axios) + the 30s cache
-lib/                  Pure helpers: markets, formatting, errors, watchlist cookie, cache
-views/                EJS pages (index, price, watchlist, error)
+lib/                  Pure helpers: markets, formatting, errors, cache, cookies, watchlist, portfolio
+views/                EJS pages (index, price, watchlist, portfolio, error)
 views/partials/       Shared header and footer
 public/               CSS and a little browser JavaScript
 test/                 Automated tests
@@ -77,4 +78,6 @@ test/                 Automated tests
 | `GET /` | Home page: market dropdown + active markets |
 | `GET /price?symbol=BTC-USD` | Price details and order book for one market |
 | `GET /watchlist` | Saved markets with latest prices |
+| `GET /portfolio` | Your holdings with values and totals (`?symbol=BTC-USD&amount=0.5` pre-fills the form) |
+| `POST /portfolio/set`, `POST /portfolio/remove` | Add, update or remove a holding (stored in a cookie) |
 | `POST /watchlist/add`, `POST /watchlist/remove` | Update the watchlist cookie |

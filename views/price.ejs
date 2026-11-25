@@ -42,6 +42,7 @@
       <%= watching ? '★ Remove from watchlist' : '☆ Add to watchlist' %>
     </button>
   </form>
+  <p class="track"><a href="/portfolio?symbol=<%= ticker.symbol %>">Track how much <%= base %> you hold &rarr;</a></p>
 </div>
 
 <p class="updated">Updated <%= fmt.formatTime(updatedAt) %> &middot; refreshes every <%= refreshSeconds %>s</p>

@@ -1,0 +1,85 @@
+<%- include("partials/header.ejs") %>
+
+<h1>Your portfolio</h1>
+<p class="lead">Enter how much of each coin you hold to see what it is worth at the last trade price.</p>
+
+<% if (error) { %>
+  <p class="error"><%= error %></p>
+<% } %>
+
+<!-- Saving the same market again replaces its amount -->
+<form action="/portfolio/set" method="POST" class="card" id="form">
+  <label for="symbol">Market</label>
+  <select id="symbol" name="symbol" required>
+    <option value="" <%= form.symbol ? '' : 'selected' %> disabled>Choose a market…</option>
+    <% groups.forEach((g) => { %>
+      <optgroup label="Priced in <%= g.quote %>">
+        <% g.symbols.forEach((s) => { %>
+          <option value="<%= s %>" <%= s === form.symbol ? 'selected' : '' %>><%= s %></option>
+        <% }) %>
+      </optgroup>
+    <% }) %>
+  </select>
+  <input type="text" inputmode="decimal" name="amount" value="<%= form.amount %>"
+         placeholder="Amount, e.g. 0.5" aria-label="Amount you hold" required autocomplete="off">
+  <button type="submit">Save holding</button>
+</form>
+
+<% if (!rows.length) { %>
+  <p class="lead">No holdings yet. Pick a market above and enter an amount.</p>
+<% } else { %>
+  <table>
+    <thead>
+      <tr><th>Holding</th><th>Price</th><th>Value</th><th>24h</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% rows.forEach((row) => { %>
+        <tr>
+          <td>
+            <a href="/price?symbol=<%= row.symbol %>"><%= row.symbol %></a><br>
+            <span class="lead"><%= fmt.formatAmount(row.amount, row.base) %></span>
+          </td>
+          <% if (row.ticker) { %>
+            <td>
+              <%= fmt.formatPrice(row.ticker.last_trade_price, row.quote) %>
+              <% if (row.stale) { %>
+                <span class="warn" title="Nothing traded in the last 24 hours, so this price may be out of date" aria-label="Price may be out of date">&#9888;</span>
+              <% } %>
+            </td>
+            <td><strong><%= fmt.formatValue(row.value, row.quote) %></strong></td>
+            <td class="<%= fmt.changeClass(row.ticker.change) %>"><%= fmt.formatChange(row.ticker.change) %></td>
+          <% } else { %>
+            <td colspan="3" class="lead">Price unavailable</td>
+          <% } %>
+          <td class="actions">
+            <a href="/portfolio?symbol=<%= row.symbol %>&amount=<%= row.amount %>#form" aria-label="Edit <%= row.symbol %>">Edit</a>
+            <form action="/portfolio/remove" method="POST" class="inline">
+              <input type="hidden" name="symbol" value="<%= row.symbol %>">
+              <button type="submit" class="secondary small" aria-label="Remove <%= row.symbol %>">Remove</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <!-- Dollars and euros can't be added together, so there is one total per quote currency -->
+  <% totals.forEach((total) => { %>
+    <div class="card total">
+      <p class="label">Total value in <%= total.quote %> (<%= total.count %> <%= total.count === 1 ? 'holding' : 'holdings' %>)</p>
+      <p class="big"><%= fmt.formatValue(total.value, total.quote) %></p>
+      <% if (total.stale) { %>
+        <p class="warn-text">&#9888; Includes prices that may be out of date.</p>
+      <% } %>
+    </div>
+  <% }) %>
+  <% if (unpriced) { %>
+    <p class="lead"><%= unpriced %> <%= unpriced === 1 ? 'holding' : 'holdings' %> left out of the totals because no price is available.</p>
+  <% } %>
+
+  <p class="updated">Updated <%= fmt.formatTime(updatedAt) %> &middot; refreshes every <%= refreshSeconds %>s</p>
+<% } %>
+
+<p class="lead">Your holdings are saved in a cookie in this browser (up to <%= maxHoldings %> markets). Nothing is stored on a server.</p>
+
+<%- include("partials/footer.ejs") %>

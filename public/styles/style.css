@@ -146,3 +146,12 @@ button:disabled { opacity: 0.6; cursor: wait; }
   border-radius: 6px;
 }
 .warn { color: var(--accent); cursor: help; }
+
+/* Portfolio */
+td.actions { white-space: nowrap; text-align: right; }
+td.actions form.inline { display: inline; margin: 0 0 0 8px; }
+.total { margin: 12px 0; }
+.total .label { color: var(--muted); margin: 0; }
+.total .big { font-size: 2rem; font-weight: 800; margin: 4px 0; }
+.warn-text { color: var(--accent); margin: 0; font-size: 0.9rem; }
+.track { margin: 16px 0 0; font-size: 0.9rem; }

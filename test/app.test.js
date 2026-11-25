@@ -250,3 +250,140 @@ test("static files are not counted by the rate limit", async () => {
     server.close();
   }
 });
+
+// ---- Portfolio ----
+
+const form = (body, cookie) => ({
+  method: "POST",
+  headers: {
+    "content-type": "application/x-www-form-urlencoded",
+    ...(cookie ? { cookie } : {}),
+  },
+  body,
+  redirect: "manual",
+});
+
+test("portfolio: saving a holding sets a cookie and the page shows its value", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const save = await fetch(`${base}/portfolio/set`, form("symbol=btc-usd&amount=0.5"));
+    assert.equal(save.status, 302);
+    assert.equal(save.headers.get("location"), "/portfolio");
+    const cookie = save.headers.get("set-cookie").split(";")[0];
+    assert.equal(decodeURIComponent(cookie), "portfolio=BTC-USD:0.5");
+
+    const page = await fetch(`${base}/portfolio`, { headers: { cookie } });
+    const html = await page.text();
+    assert.equal(page.status, 200);
+    assert.match(html, /\$29,000\.00/); // 0.5 x 58,000, in the row and the total
+    assert.match(html, /Total value in USD/);
+  }));
+
+test("portfolio: saving the same market again replaces the amount", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const cookie = "portfolio=" + encodeURIComponent("BTC-USD:0.5,XRP-EUR:10");
+    const save = await fetch(`${base}/portfolio/set`, form("symbol=BTC-USD&amount=2", cookie));
+    const updated = decodeURIComponent(save.headers.get("set-cookie").split(";")[0]);
+    assert.equal(updated, "portfolio=BTC-USD:2,XRP-EUR:10");
+  }));
+
+test("portfolio: totals are per currency and stale prices are flagged", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const cookie = "portfolio=" + encodeURIComponent("BTC-USD:1,ETH-USD:1,XRP-EUR:100");
+    const html = await (await fetch(`${base}/portfolio`, { headers: { cookie } })).text();
+    assert.match(html, /Total value in USD/);
+    assert.match(html, /\$60,000\.00/); // 58,000 + 2,000
+    assert.match(html, /Total value in EUR/);
+    assert.match(html, /€85\.00/);
+    assert.match(html, /Includes prices that may be out of date/); // ETH-USD has no volume
+  }));
+
+test("portfolio: bad amounts are rejected with a message and nothing is saved", () =>
+  withServer(fakeBlockchain, async (base) => {
+    for (const amount of ["", "0", "-1", "abc", "1e3", "1,5"]) {
+      const res = await fetch(`${base}/portfolio/set`, form(`symbol=BTC-USD&amount=${encodeURIComponent(amount)}`));
+      assert.equal(res.status, 400, `amount "${amount}"`);
+      assert.match(await res.text(), /Enter an amount greater than 0/);
+      assert.equal(res.headers.get("set-cookie"), null);
+    }
+  }));
+
+test("portfolio: markets that are not in the list are rejected", () =>
+  withServer(fakeBlockchain, async (base) => {
+    for (const symbol of ["FAKE-ZZZ", "bad", "%3Cscript%3E", ""]) {
+      const res = await fetch(`${base}/portfolio/set`, form(`symbol=${symbol}&amount=1`));
+      assert.equal(res.status, 400, `symbol "${symbol}"`);
+      assert.match(await res.text(), /Choose a market from the list/);
+    }
+  }));
+
+test("portfolio: the form keeps what the user typed when it is rejected", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const html = await (await fetch(`${base}/portfolio/set`, form("symbol=BTC-USD&amount=abc"))).text();
+    assert.match(html, /value="abc"/);
+    assert.match(html, /<option value="BTC-USD" selected>/);
+  }));
+
+test("portfolio: you can't track more than the maximum number of markets", () => {
+  const many = Array.from({ length: 21 }, (_, i) => ({
+    symbol: `C${i + 1}-USD`,
+    price_24h: 1,
+    volume_24h: 1,
+    last_trade_price: 1,
+  }));
+  return withServer({ ...fakeBlockchain, getActiveTickers: async () => many }, async (base) => {
+    const cookie = "portfolio=" + encodeURIComponent(many.slice(0, 20).map((t) => `${t.symbol}:1`).join(","));
+    const res = await fetch(`${base}/portfolio/set`, form("symbol=C21-USD&amount=1", cookie));
+    assert.equal(res.status, 400);
+    assert.match(await res.text(), /up to 20 holdings/);
+
+    // ...but updating one that is already tracked still works
+    const update = await fetch(`${base}/portfolio/set`, form("symbol=C1-USD&amount=5", cookie));
+    assert.equal(update.status, 302);
+  });
+});
+
+test("portfolio: remove deletes just that holding", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const cookie = "portfolio=" + encodeURIComponent("BTC-USD:1,XRP-EUR:10");
+    const res = await fetch(`${base}/portfolio/remove`, form("symbol=BTC-USD", cookie));
+    assert.equal(res.headers.get("location"), "/portfolio");
+    assert.equal(decodeURIComponent(res.headers.get("set-cookie").split(";")[0]), "portfolio=XRP-EUR:10");
+  }));
+
+test("portfolio: junk cookies and empty POSTs don't crash", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const page = await fetch(`${base}/portfolio`, { headers: { cookie: "portfolio=%E0%A4%A,<script>" } });
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /No holdings yet/);
+
+    const empty = await fetch(`${base}/portfolio/set`, { method: "POST", redirect: "manual" });
+    assert.equal(empty.status, 400);
+    const remove = await fetch(`${base}/portfolio/remove`, { method: "POST", redirect: "manual" });
+    assert.equal(remove.status, 302);
+  }));
+
+test("portfolio: still lists holdings (without prices) when the API is down", () =>
+  withServer(
+    { ...fakeBlockchain, getActiveTickers: async () => { throw new Error("down"); } },
+    async (base) => {
+      const cookie = "portfolio=" + encodeURIComponent("BTC-USD:1");
+      const res = await fetch(`${base}/portfolio`, { headers: { cookie } });
+      const html = await res.text();
+      assert.equal(res.status, 502);
+      assert.match(html, /BTC-USD/);
+      assert.match(html, /Price unavailable/);
+    }
+  ));
+
+test("portfolio: the form can be pre-filled from the URL", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const html = await (await fetch(`${base}/portfolio?symbol=btc-usd&amount=0.5`)).text();
+    assert.match(html, /<option value="BTC-USD" selected>/);
+    assert.match(html, /value="0\.5"/);
+  }));
+
+test("price page links to the portfolio form for that coin", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const html = await (await fetch(`${base}/price?symbol=BTC-USD`)).text();
+    assert.match(html, /href="\/portfolio\?symbol=BTC-USD"[^>]*>Track how much BTC you hold/);
+  }));

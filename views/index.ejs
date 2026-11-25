@@ -1,0 +1,40 @@
+<%- include("partials/header.ejs") %>
+
+<h1>Check a crypto price</h1>
+<p class="lead">Pick a market (for example <strong>BTC-USD</strong>) to see its latest price.</p>
+
+<% if (error) { %>
+  <p class="error"><%= error %></p>
+<% } %>
+
+<!-- Form sends the chosen market to /price?symbol=... -->
+<form action="/price" method="GET" class="card">
+  <label for="symbol">Market</label>
+  <input list="markets" id="symbol" name="symbol" placeholder="BTC-USD" value="BTC-USD" required autocomplete="off">
+  <datalist id="markets">
+    <% symbols.forEach((s) => { %>
+      <option value="<%= s %>"></option>
+    <% }) %>
+  </datalist>
+  <button type="submit">Get price</button>
+</form>
+
+<% if (movers.length) { %>
+  <h2>Top 5 gainers (24h)</h2>
+  <table>
+    <thead>
+      <tr><th>Market</th><th>Last price</th><th>24h change</th></tr>
+    </thead>
+    <tbody>
+      <% movers.forEach((m) => { %>
+        <tr>
+          <td><a href="/price?symbol=<%= m.symbol %>"><%= m.symbol %></a></td>
+          <td><%= m.last_trade_price.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></td>
+          <td class="<%= m.change >= 0 ? 'up' : 'down' %>"><%= m.change.toFixed(2) %>%</td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+<%- include("partials/footer.ejs") %>

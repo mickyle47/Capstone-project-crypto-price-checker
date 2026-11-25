@@ -1,0 +1,30 @@
+<%- include("partials/header.ejs") %>
+
+<% if (error) { %>
+  <h1>Oops</h1>
+  <p class="error"><%= error %></p>
+<% } else { %>
+  <h1><%= ticker.symbol %></h1>
+
+  <div class="card price-card">
+    <p class="label">Last trade price</p>
+    <p class="big"><%= ticker.last_trade_price.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></p>
+
+    <% if (ticker.change !== null) { %>
+      <p class="<%= ticker.change >= 0 ? 'up' : 'down' %>">
+        <%= ticker.change >= 0 ? '▲' : '▼' %> <%= Math.abs(ticker.change).toFixed(2) %>% vs 24h ago
+      </p>
+    <% } %>
+
+    <dl>
+      <dt>Price 24h ago</dt>
+      <dd><%= ticker.price_24h.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></dd>
+      <dt>24h volume</dt>
+      <dd><%= ticker.volume_24h.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></dd>
+    </dl>
+  </div>
+<% } %>
+
+<p><a href="/">&larr; Check another market</a></p>
+
+<%- include("partials/footer.ejs") %>

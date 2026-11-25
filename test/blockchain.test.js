@@ -69,3 +69,66 @@ test("getOrderBook returns null instead of throwing", async () => {
   const client = createBlockchainClient({ http });
   assert.equal(await client.getOrderBook("BTC-USD"), null);
 });
+
+// Per-market caching (ticker and order book)
+function countingHttp() {
+  const http = {
+    calls: [],
+    failBook: false,
+    async get(url) {
+      http.calls.push(url);
+      if (url.includes("/l2/")) {
+        if (http.failBook) throw new Error("book down");
+        return { data: { bids: [], asks: [] } };
+      }
+      return { data: { symbol: "BTC-USD", last_trade_price: 1 } };
+    },
+  };
+  return http;
+}
+
+test("getTicker is cached per market until the market TTL runs out", async () => {
+  const http = countingHttp();
+  let time = 0;
+  const client = createBlockchainClient({ http, marketTtlMs: 1000, now: () => time });
+
+  await client.getTicker("BTC-USD");
+  await client.getTicker("BTC-USD");
+  assert.equal(http.calls.length, 1, "same market within the TTL is served from cache");
+
+  await client.getTicker("ETH-USD");
+  assert.equal(http.calls.length, 2, "a different market is a separate cache entry");
+
+  time = 1001;
+  await client.getTicker("BTC-USD");
+  assert.equal(http.calls.length, 3, "after the TTL it is fetched again");
+});
+
+test("the order book is cached, but a failed order book is not", async () => {
+  const http = countingHttp();
+  const client = createBlockchainClient({ http });
+
+  await client.getOrderBook("BTC-USD");
+  await client.getOrderBook("BTC-USD");
+  assert.equal(http.calls.length, 1);
+
+  http.failBook = true;
+  assert.equal(await client.getOrderBook("ETH-USD"), null);
+  http.failBook = false;
+  assert.notEqual(await client.getOrderBook("ETH-USD"), null, "the failure must not be remembered");
+});
+
+test("ticker errors are not cached", async () => {
+  const http = countingHttp();
+  const original = http.get;
+  http.get = async (url) => {
+    if (http.failTicker) throw new Error("down");
+    return original(url);
+  };
+  const client = createBlockchainClient({ http });
+
+  http.failTicker = true;
+  await assert.rejects(client.getTicker("BTC-USD"), /down/);
+  http.failTicker = false;
+  assert.equal((await client.getTicker("BTC-USD")).symbol, "BTC-USD");
+});

@@ -62,3 +62,29 @@ test("summarizeOrderBook has no spread when one side is empty", () => {
   const book = summarizeOrderBook({ bids: [{ px: 1, qty: 1 }], asks: [] });
   assert.equal(book.spread, null);
 });
+
+// assessFreshness: is the "last trade" price possibly out of date?
+import { assessFreshness } from "../lib/markets.js";
+
+const bookWith = (bid, ask) => ({ bids: [{ px: bid, qty: 1 }], asks: [{ px: ask, qty: 1 }] });
+
+test("assessFreshness flags a market with no volume", () => {
+  assert.deepEqual(assessFreshness({ volume_24h: 0, last_trade_price: 5 }, null), { reason: "no-volume" });
+});
+
+test("assessFreshness flags a last trade outside the bid/ask range", () => {
+  const ticker = { volume_24h: 1, last_trade_price: 58000 };
+  assert.deepEqual(assessFreshness(ticker, bookWith(59000, 60000)), {
+    reason: "outside-book",
+    bid: 59000,
+    ask: 60000,
+  });
+  assert.equal(assessFreshness({ ...ticker, last_trade_price: 61000 }, bookWith(59000, 60000)).reason, "outside-book");
+});
+
+test("assessFreshness is fine when the last trade is inside the range or there is no book", () => {
+  const ticker = { volume_24h: 1, last_trade_price: 59500 };
+  assert.equal(assessFreshness(ticker, bookWith(59000, 60000)), null);
+  assert.equal(assessFreshness(ticker, null), null);
+  assert.equal(assessFreshness(ticker, { bids: [{ px: 1, qty: 1 }], asks: [] }), null);
+});

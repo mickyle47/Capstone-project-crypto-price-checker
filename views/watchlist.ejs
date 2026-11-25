@@ -16,7 +16,12 @@
         <tr>
           <td><a href="/price?symbol=<%= item.symbol %>"><%= item.symbol %></a></td>
           <% if (item.ticker) { %>
-            <td><%= fmt.formatPrice(item.ticker.last_trade_price, fmt.splitSymbol(item.symbol).quote) %></td>
+            <td>
+              <%= fmt.formatPrice(item.ticker.last_trade_price, fmt.splitSymbol(item.symbol).quote) %>
+              <% if (!item.ticker.volume_24h) { %>
+                <span class="warn" title="Nothing traded in the last 24 hours, so this price may be out of date" aria-label="Price may be out of date">&#9888;</span>
+              <% } %>
+            </td>
             <td class="<%= fmt.changeClass(item.ticker.change) %>"><%= fmt.formatChange(item.ticker.change) %></td>
           <% } else { %>
             <td colspan="2" class="lead">No recent trades</td>

@@ -172,3 +172,81 @@ test("watchlist ignores junk in the cookie and invalid symbols", () =>
     assert.equal(add.headers.get("location"), "/");
     assert.equal(add.headers.get("set-cookie"), null);
   }));
+
+// ---- Stale-price warnings ----
+
+test("price page warns when nothing traded in the last 24 hours", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const res = await fetch(`${base}/price?symbol=ETH-USD`); // volume_24h is 0
+    assert.match(await res.text(), /Nothing has traded in the last 24 hours/);
+  }));
+
+test("price page warns when the last trade is outside the order book range", () =>
+  withServer(
+    {
+      ...fakeBlockchain,
+      getOrderBook: async () => ({
+        bids: [{ px: 59000, qty: 1, num: 1 }],
+        asks: [{ px: 60000, qty: 1, num: 1 }],
+      }),
+    },
+    async (base) => {
+      const html = await (await fetch(`${base}/price?symbol=BTC-USD`)).text();
+      assert.match(html, /outside the current\s+order book range/);
+      assert.match(html, /\$59,000\.00/);
+    }
+  ));
+
+test("price page has no warning when the price looks current", () =>
+  withServer(fakeBlockchain, async (base) => {
+    // fake book is 57,900 / 58,100 and the last trade is 58,000
+    const html = await (await fetch(`${base}/price?symbol=BTC-USD`)).text();
+    assert.doesNotMatch(html, /class="warning"/);
+  }));
+
+test("watchlist marks markets with no recent volume", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const html = await (await fetch(`${base}/watchlist`, { headers: { cookie: "watchlist=ETH-USD,BTC-USD" } })).text();
+    assert.equal((html.match(/class="warn"/g) || []).length, 1); // only ETH-USD
+  }));
+
+// ---- Security: headers and rate limiting ----
+
+test("responses carry security headers and hide x-powered-by", () =>
+  withServer(fakeBlockchain, async (base) => {
+    const res = await fetch(base);
+    assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+    assert.ok(res.headers.get("content-security-policy"));
+    assert.equal(res.headers.get("x-powered-by"), null);
+  }));
+
+test("too many requests from one visitor get a 429 page", async () => {
+  const server = createApp({
+    blockchain: fakeBlockchain,
+    rateLimitOptions: { windowMs: 60 * 1000, limit: 2 },
+  }).listen(0);
+  try {
+    const base = `http://localhost:${server.address().port}`;
+    assert.equal((await fetch(base)).status, 200);
+    assert.equal((await fetch(base)).status, 200);
+    const blocked = await fetch(base);
+    assert.equal(blocked.status, 429);
+    assert.match(await blocked.text(), /Too many requests/);
+  } finally {
+    server.close();
+  }
+});
+
+test("static files are not counted by the rate limit", async () => {
+  const server = createApp({
+    blockchain: fakeBlockchain,
+    rateLimitOptions: { windowMs: 60 * 1000, limit: 1 },
+  }).listen(0);
+  try {
+    const base = `http://localhost:${server.address().port}`;
+    for (let i = 0; i < 3; i++) assert.equal((await fetch(`${base}/styles/style.css`)).status, 200);
+    assert.equal((await fetch(base)).status, 200); // first counted request still allowed
+  } finally {
+    server.close();
+  }
+});

@@ -10,7 +10,9 @@ rendered with EJS.
 - Order book view (best bids and asks, with size bars and the spread) for each market
 - Watchlist: save markets and see their latest prices on one page (stored in a cookie, no database)
 - Home page lists the busiest markets that traded in the last 24 hours (most pairs on this exchange are idle)
-- The full market list is cached in memory for 30 seconds to keep pages fast and avoid over-calling the API
+- Warns when a price may be out of date (nothing traded in 24h, or the last trade is outside the live bid/ask range) - this exchange is thinly traded
+- API results are cached in memory (market list 30s, each market and order book 15s) so page views don't hammer the API; failures are never cached
+- Security basics: `helmet` headers, no `x-powered-by`, and a rate limit of 120 requests per minute per visitor
 - Prices shown with currency symbols ($, €, £), a "last updated" time, and auto-refresh every 30 seconds on the price and watchlist pages
 - Friendly error pages for bad input, unknown markets, timeouts and API outages (details are logged to the console)
 
@@ -29,7 +31,14 @@ For auto-restart while developing (needs `npm install -g nodemon` once):
 npm run dev
 ```
 
-Then open <http://localhost:3000>. Set the `PORT` environment variable to use a different port.
+Then open <http://localhost:3000>.
+
+Optional environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | Use a different port (default 3000) |
+| `TRUST_PROXY` | Set to `1` when hosting behind a proxy (Render, Railway...) so the rate limiter sees each visitor's real IP |
 
 ## Tests
 
@@ -54,7 +63,7 @@ index.js              Starts the server
 app.js                Builds the Express app (views, routes, error handlers)
 routes/               pages.js (home, price) and watchlist.js
 services/blockchain.js  All Blockchain.com API calls (Axios) + the 30s cache
-lib/                  Pure helpers: markets, formatting, errors, watchlist cookie
+lib/                  Pure helpers: markets, formatting, errors, watchlist cookie, cache
 views/                EJS pages (index, price, watchlist, error)
 views/partials/       Shared header and footer
 public/               CSS and a little browser JavaScript

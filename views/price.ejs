@@ -3,6 +3,20 @@
 
 <h1><%= ticker.symbol %></h1>
 
+<% if (stale) { %>
+  <!-- This exchange is thinly traded, so the last price can be old -->
+  <p class="warning" role="status">
+    &#9888;
+    <% if (stale.reason === "no-volume") { %>
+      Nothing has traded in the last 24 hours, so this price may be out of date.
+    <% } else { %>
+      The last trade (<%= fmt.formatPrice(ticker.last_trade_price, quote) %>) is outside the current
+      order book range (<%= fmt.formatPrice(stale.bid, quote) %> &ndash; <%= fmt.formatPrice(stale.ask, quote) %>),
+      so it may be out of date.
+    <% } %>
+  </p>
+<% } %>
+
 <div class="card price-card">
   <p class="label">Last trade price</p>
   <p class="big"><%= fmt.formatPrice(ticker.last_trade_price, quote) %></p>

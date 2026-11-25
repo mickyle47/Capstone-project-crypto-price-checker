@@ -4,6 +4,7 @@ import {
   groupByQuote,
   isValidSymbol,
   normalizeSymbol,
+  assessFreshness,
   percentChange,
   summarizeOrderBook,
 } from "../lib/markets.js";
@@ -57,12 +58,15 @@ export default function pageRoutes(blockchain) {
         blockchain.getOrderBook(symbol),
       ]);
 
+      const book = summarizeOrderBook(bookData);
+
       res.render("price.ejs", {
         title: symbol,
         refreshSeconds: 30, // the page reloads itself to stay current
         updatedAt: new Date(),
         ticker: { ...raw, change: percentChange(raw) },
-        book: summarizeOrderBook(bookData),
+        book,
+        stale: assessFreshness(raw, book), // warns when the last price may be old
         watching: readWatchlist(req).includes(symbol),
       });
     } catch (error) {

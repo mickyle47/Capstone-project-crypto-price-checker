@@ -6,8 +6,11 @@ rendered with EJS.
 
 ## Features
 
-- Pick (or type) a market such as `BTC-USD` and see its last trade price, price 24h ago, 24h volume and % change
-- Home page shows the top 5 gainers over the last 24 hours
+- Choose a market from a dropdown grouped by quote currency (USD, EUR, BTC...) and see its last trade price, price 24h ago, 24h volume and % change
+- Order book view (best bids and asks, with size bars and the spread) for each market
+- Watchlist: save markets and see their latest prices on one page (stored in a cookie, no database)
+- Home page lists the busiest markets that traded in the last 24 hours (most pairs on this exchange are idle)
+- The full market list is cached in memory for 30 seconds to keep pages fast and avoid over-calling the API
 - Friendly error messages for bad input, unknown markets, timeouts and API outages (details are logged to the console)
 
 ## How to run
@@ -32,6 +35,7 @@ Then open <http://localhost:3000>. Set the `PORT` environment variable to use a 
 | Purpose | Request |
 | --- | --- |
 | List all markets | `GET https://api.blockchain.com/v3/exchange/tickers` |
+| Order book | `GET https://api.blockchain.com/v3/exchange/l2/{symbol}` |
 | One market | `GET https://api.blockchain.com/v3/exchange/tickers/{symbol}` |
 
 ## Project structure
@@ -39,7 +43,7 @@ Then open <http://localhost:3000>. Set the `PORT` environment variable to use a 
 ```
 index.js              Express server, routes and Axios calls
 public/styles/        CSS
-views/                EJS pages (index, price)
+views/                EJS pages (index, price, watchlist)
 views/partials/       Shared header and footer
 ```
 
@@ -47,5 +51,7 @@ views/partials/       Shared header and footer
 
 | Route | Description |
 | --- | --- |
-| `GET /` | Home page: market search + top gainers |
-| `GET /price?symbol=BTC-USD` | Price details for one market |
+| `GET /` | Home page: market dropdown + active markets |
+| `GET /price?symbol=BTC-USD` | Price details and order book for one market |
+| `GET /watchlist` | Saved markets with latest prices |
+| `POST /watchlist/add`, `POST /watchlist/remove` | Update the watchlist cookie |

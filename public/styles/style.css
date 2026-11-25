@@ -98,3 +98,38 @@ footer {
   font-size: 0.85rem;
   padding: 16px;
 }
+
+/* Nav links sit side by side */
+nav { display: flex; gap: 20px; align-items: center; }
+nav a:not(.brand) { text-decoration: none; color: var(--muted); }
+nav a:not(.brand):hover { color: var(--text); }
+
+/* Dropdown matches the text input style */
+select {
+  flex: 1;
+  min-width: 160px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #2d3a54;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+/* Small forms that sit inside a card or table cell */
+form.inline { margin: 16px 0 0; }
+td form.inline { margin: 0; }
+button.secondary { background: transparent; color: var(--text); border: 1px solid #2d3a54; }
+button.small { padding: 4px 10px; font-size: 0.85rem; }
+
+/* Order book: bids and asks side by side, stacked on small screens */
+.book { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 560px) { .book { grid-template-columns: 1fr; } }
+.book .card { margin: 0; }
+.book h3 { margin-top: 0; }
+.level { position: relative; display: flex; justify-content: space-between; padding: 4px 6px; font-variant-numeric: tabular-nums; }
+.level .bar { position: absolute; left: 0; top: 0; bottom: 0; opacity: 0.18; border-radius: 4px; }
+.level .bar.up { background: var(--up); }
+.level .bar.down { background: var(--down); }
+.level .px, .level .qty { position: relative; }
+.level .qty { color: var(--muted); }

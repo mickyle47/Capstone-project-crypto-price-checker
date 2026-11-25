@@ -22,7 +22,43 @@
       <dt>24h volume</dt>
       <dd><%= ticker.volume_24h.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></dd>
     </dl>
+
+    <!-- Add to / remove from the cookie-based watchlist -->
+    <form action="/watchlist/<%= watching ? 'remove' : 'add' %>" method="POST" class="inline">
+      <input type="hidden" name="symbol" value="<%= ticker.symbol %>">
+      <input type="hidden" name="from" value="price">
+      <button type="submit" class="<%= watching ? 'secondary' : '' %>">
+        <%= watching ? '★ Remove from watchlist' : '☆ Add to watchlist' %>
+      </button>
+    </form>
   </div>
+
+  <h2>Order book</h2>
+  <% if (book && (book.bids.length || book.asks.length)) { %>
+    <% if (book.spread !== null) { %>
+      <p class="lead">Spread (gap between best buy and best sell): <strong><%= book.spread.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></strong></p>
+    <% } %>
+    <div class="book">
+      <% [{ title: 'Bids (buyers)', rows: book.bids, cls: 'up' }, { title: 'Asks (sellers)', rows: book.asks, cls: 'down' }].forEach((side) => { %>
+        <div class="card">
+          <h3 class="<%= side.cls %>"><%= side.title %></h3>
+          <% if (!side.rows.length) { %>
+            <p class="lead">No orders.</p>
+          <% } %>
+          <% side.rows.forEach((r) => { %>
+            <!-- The coloured bar's width shows this level's size relative to the biggest level -->
+            <div class="level">
+              <span class="bar <%= side.cls %>" style="width: <%= Math.max(2, (r.qty / book.maxQty) * 100).toFixed(1) %>%"></span>
+              <span class="px"><%= r.px.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></span>
+              <span class="qty"><%= r.qty.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></span>
+            </div>
+          <% }) %>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="lead">The order book isn't available right now.</p>
+  <% } %>
 <% } %>
 
 <p><a href="/">&larr; Check another market</a></p>

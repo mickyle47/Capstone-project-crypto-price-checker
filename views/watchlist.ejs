@@ -1,0 +1,38 @@
+<%- include("partials/header.ejs") %>
+
+<h1>Your watchlist</h1>
+
+<% if (error) { %>
+  <p class="error"><%= error %></p>
+<% } else if (!items.length) { %>
+  <p class="lead">Nothing here yet. Open any market and press <strong>Add to watchlist</strong>.</p>
+<% } else { %>
+  <table>
+    <thead>
+      <tr><th>Market</th><th>Last price</th><th>24h change</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% items.forEach((item) => { %>
+        <tr>
+          <td><a href="/price?symbol=<%= item.symbol %>"><%= item.symbol %></a></td>
+          <% if (item.ticker) { %>
+            <td><%= item.ticker.last_trade_price.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></td>
+            <td class="<%= item.ticker.change >= 0 ? 'up' : 'down' %>">
+              <%= item.ticker.change === null ? '—' : item.ticker.change.toFixed(2) + '%' %>
+            </td>
+          <% } else { %>
+            <td colspan="2" class="lead">No recent trades</td>
+          <% } %>
+          <td>
+            <form action="/watchlist/remove" method="POST" class="inline">
+              <input type="hidden" name="symbol" value="<%= item.symbol %>">
+              <button type="submit" class="secondary small" aria-label="Remove <%= item.symbol %>">Remove</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+<%- include("partials/footer.ejs") %>

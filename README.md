@@ -11,7 +11,8 @@ rendered with EJS.
 - Watchlist: save markets and see their latest prices on one page (stored in a cookie, no database)
 - Home page lists the busiest markets that traded in the last 24 hours (most pairs on this exchange are idle)
 - The full market list is cached in memory for 30 seconds to keep pages fast and avoid over-calling the API
-- Friendly error messages for bad input, unknown markets, timeouts and API outages (details are logged to the console)
+- Prices shown with currency symbols ($, €, £), a "last updated" time, and auto-refresh every 30 seconds on the price and watchlist pages
+- Friendly error pages for bad input, unknown markets, timeouts and API outages (details are logged to the console)
 
 ## How to run
 
@@ -30,6 +31,14 @@ npm run dev
 
 Then open <http://localhost:3000>. Set the `PORT` environment variable to use a different port.
 
+## Tests
+
+```bash
+npm test
+```
+
+Uses Node's built-in test runner (no extra packages) with a fake API client, so no internet is needed.
+
 ## API endpoints used
 
 | Purpose | Request |
@@ -41,10 +50,15 @@ Then open <http://localhost:3000>. Set the `PORT` environment variable to use a 
 ## Project structure
 
 ```
-index.js              Express server, routes and Axios calls
-public/styles/        CSS
-views/                EJS pages (index, price, watchlist)
+index.js              Starts the server
+app.js                Builds the Express app (views, routes, error handlers)
+routes/               pages.js (home, price) and watchlist.js
+services/blockchain.js  All Blockchain.com API calls (Axios) + the 30s cache
+lib/                  Pure helpers: markets, formatting, errors, watchlist cookie
+views/                EJS pages (index, price, watchlist, error)
 views/partials/       Shared header and footer
+public/               CSS and a little browser JavaScript
+test/                 Automated tests
 ```
 
 ## Routes

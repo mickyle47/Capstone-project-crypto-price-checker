@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <% if (typeof refreshSeconds !== "undefined" && refreshSeconds) { %>
+    <!-- Pages that show live prices reload themselves to stay current -->
+    <meta http-equiv="refresh" content="<%= refreshSeconds %>">
+  <% } %>
   <link rel="stylesheet" href="/styles/style.css">
-  <title>Crypto Price Checker</title>
+  <script src="/js/app.js" defer></script>
+  <title><%= typeof title !== "undefined" ? title + " · " : "" %>Crypto Price Checker</title>
 </head>
 <body>
   <nav>

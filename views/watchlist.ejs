@@ -16,10 +16,8 @@
         <tr>
           <td><a href="/price?symbol=<%= item.symbol %>"><%= item.symbol %></a></td>
           <% if (item.ticker) { %>
-            <td><%= item.ticker.last_trade_price.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></td>
-            <td class="<%= item.ticker.change >= 0 ? 'up' : 'down' %>">
-              <%= item.ticker.change === null ? '—' : item.ticker.change.toFixed(2) + '%' %>
-            </td>
+            <td><%= fmt.formatPrice(item.ticker.last_trade_price, fmt.splitSymbol(item.symbol).quote) %></td>
+            <td class="<%= fmt.changeClass(item.ticker.change) %>"><%= fmt.formatChange(item.ticker.change) %></td>
           <% } else { %>
             <td colspan="2" class="lead">No recent trades</td>
           <% } %>
@@ -33,6 +31,7 @@
       <% }) %>
     </tbody>
   </table>
+  <p class="updated">Updated <%= fmt.formatTime(updatedAt) %> &middot; refreshes every <%= refreshSeconds %>s</p>
 <% } %>
 
 <%- include("partials/footer.ejs") %>

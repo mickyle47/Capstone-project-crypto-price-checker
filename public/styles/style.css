@@ -133,3 +133,7 @@ button.small { padding: 4px 10px; font-size: 0.85rem; }
 .level .bar.down { background: var(--down); }
 .level .px, .level .qty { position: relative; }
 .level .qty { color: var(--muted); }
+
+/* "Updated 14:32:05" label and disabled (loading) buttons */
+.updated { color: var(--muted); font-size: 0.85rem; margin: -8px 0 24px; }
+button:disabled { opacity: 0.6; cursor: wait; }

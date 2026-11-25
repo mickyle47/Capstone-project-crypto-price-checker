@@ -1,64 +1,62 @@
 <%- include("partials/header.ejs") %>
+<% const { base, quote } = fmt.splitSymbol(ticker.symbol); %>
 
-<% if (error) { %>
-  <h1>Oops</h1>
-  <p class="error"><%= error %></p>
-<% } else { %>
-  <h1><%= ticker.symbol %></h1>
+<h1><%= ticker.symbol %></h1>
 
-  <div class="card price-card">
-    <p class="label">Last trade price</p>
-    <p class="big"><%= ticker.last_trade_price.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></p>
+<div class="card price-card">
+  <p class="label">Last trade price</p>
+  <p class="big"><%= fmt.formatPrice(ticker.last_trade_price, quote) %></p>
 
-    <% if (ticker.change !== null) { %>
-      <p class="<%= ticker.change >= 0 ? 'up' : 'down' %>">
-        <%= ticker.change >= 0 ? '▲' : '▼' %> <%= Math.abs(ticker.change).toFixed(2) %>% vs 24h ago
-      </p>
-    <% } %>
-
-    <dl>
-      <dt>Price 24h ago</dt>
-      <dd><%= ticker.price_24h.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></dd>
-      <dt>24h volume</dt>
-      <dd><%= ticker.volume_24h.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></dd>
-    </dl>
-
-    <!-- Add to / remove from the cookie-based watchlist -->
-    <form action="/watchlist/<%= watching ? 'remove' : 'add' %>" method="POST" class="inline">
-      <input type="hidden" name="symbol" value="<%= ticker.symbol %>">
-      <input type="hidden" name="from" value="price">
-      <button type="submit" class="<%= watching ? 'secondary' : '' %>">
-        <%= watching ? '★ Remove from watchlist' : '☆ Add to watchlist' %>
-      </button>
-    </form>
-  </div>
-
-  <h2>Order book</h2>
-  <% if (book && (book.bids.length || book.asks.length)) { %>
-    <% if (book.spread !== null) { %>
-      <p class="lead">Spread (gap between best buy and best sell): <strong><%= book.spread.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></strong></p>
-    <% } %>
-    <div class="book">
-      <% [{ title: 'Bids (buyers)', rows: book.bids, cls: 'up' }, { title: 'Asks (sellers)', rows: book.asks, cls: 'down' }].forEach((side) => { %>
-        <div class="card">
-          <h3 class="<%= side.cls %>"><%= side.title %></h3>
-          <% if (!side.rows.length) { %>
-            <p class="lead">No orders.</p>
-          <% } %>
-          <% side.rows.forEach((r) => { %>
-            <!-- The coloured bar's width shows this level's size relative to the biggest level -->
-            <div class="level">
-              <span class="bar <%= side.cls %>" style="width: <%= Math.max(2, (r.qty / book.maxQty) * 100).toFixed(1) %>%"></span>
-              <span class="px"><%= r.px.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></span>
-              <span class="qty"><%= r.qty.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></span>
-            </div>
-          <% }) %>
-        </div>
-      <% }) %>
-    </div>
-  <% } else { %>
-    <p class="lead">The order book isn't available right now.</p>
+  <% if (ticker.change !== null) { %>
+    <p class="<%= fmt.changeClass(ticker.change) %>">
+      <%= ticker.change < 0 ? '▼' : '▲' %> <%= Math.abs(ticker.change).toFixed(2) %>% vs 24h ago
+    </p>
   <% } %>
+
+  <dl>
+    <dt>Price 24h ago</dt>
+    <dd><%= fmt.formatPrice(ticker.price_24h, quote) %></dd>
+    <dt>24h volume</dt>
+    <dd><%= fmt.formatAmount(ticker.volume_24h, base) %></dd>
+  </dl>
+
+  <!-- Add to / remove from the cookie-based watchlist -->
+  <form action="/watchlist/<%= watching ? 'remove' : 'add' %>" method="POST" class="inline">
+    <input type="hidden" name="symbol" value="<%= ticker.symbol %>">
+    <input type="hidden" name="from" value="price">
+    <button type="submit" class="<%= watching ? 'secondary' : '' %>">
+      <%= watching ? '★ Remove from watchlist' : '☆ Add to watchlist' %>
+    </button>
+  </form>
+</div>
+
+<p class="updated">Updated <%= fmt.formatTime(updatedAt) %> &middot; refreshes every <%= refreshSeconds %>s</p>
+
+<h2>Order book</h2>
+<% if (book) { %>
+  <% if (book.spread !== null) { %>
+    <p class="lead">Spread (gap between best buy and best sell): <strong><%= fmt.formatPrice(book.spread, quote) %></strong></p>
+  <% } %>
+  <div class="book">
+    <% [{ title: 'Bids (buyers)', rows: book.bids, cls: 'up' }, { title: 'Asks (sellers)', rows: book.asks, cls: 'down' }].forEach((side) => { %>
+      <div class="card">
+        <h3 class="<%= side.cls %>"><%= side.title %></h3>
+        <% if (!side.rows.length) { %>
+          <p class="lead">No orders.</p>
+        <% } %>
+        <% side.rows.forEach((r) => { %>
+          <!-- The coloured bar's width shows this level's size relative to the biggest level -->
+          <div class="level">
+            <span class="bar <%= side.cls %>" style="width: <%= Math.max(2, (r.qty / book.maxQty) * 100).toFixed(1) %>%"></span>
+            <span class="px"><%= fmt.formatPrice(r.px, quote) %></span>
+            <span class="qty"><%= fmt.formatAmount(r.qty, base) %></span>
+          </div>
+        <% }) %>
+      </div>
+    <% }) %>
+  </div>
+<% } else { %>
+  <p class="lead">The order book isn't available right now.</p>
 <% } %>
 
 <p><a href="/">&larr; Check another market</a></p>

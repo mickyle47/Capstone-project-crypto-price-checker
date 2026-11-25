@@ -8,7 +8,7 @@
 <% } %>
 
 <!-- Form sends the chosen market to /price?symbol=... -->
-<form action="/price" method="GET" class="card">
+<form action="/price" method="GET" class="card" data-loading>
   <label for="symbol">Market</label>
   <select id="symbol" name="symbol" required>
     <% groups.forEach((g) => { %>
@@ -22,18 +22,18 @@
   <button type="submit">Get price</button>
 </form>
 
-<% if (movers.length) { %>
+<% if (active.length) { %>
   <h2>Active markets (traded in the last 24h)</h2>
   <table>
     <thead>
       <tr><th>Market</th><th>Last price</th><th>24h change</th></tr>
     </thead>
     <tbody>
-      <% movers.forEach((m) => { %>
+      <% active.forEach((m) => { %>
         <tr>
           <td><a href="/price?symbol=<%= m.symbol %>"><%= m.symbol %></a></td>
-          <td><%= m.last_trade_price.toLocaleString("en-US", { maximumFractionDigits: 8 }) %></td>
-          <td class="<%= m.change >= 0 ? 'up' : 'down' %>"><%= m.change === null ? '—' : (m.change > 0 ? '+' : '') + m.change.toFixed(2) + '%' %></td>
+          <td><%= fmt.formatPrice(m.last_trade_price, fmt.splitSymbol(m.symbol).quote) %></td>
+          <td class="<%= fmt.changeClass(m.change) %>"><%= fmt.formatChange(m.change) %></td>
         </tr>
       <% }) %>
     </tbody>
